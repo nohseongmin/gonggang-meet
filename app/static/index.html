@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>공강밋 — 팀플 회의시간, 시간표만 넣으면 끝</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="landing">
+    <h1>공강밋 <span class="logo-sub">Gonggang-Meet</span></h1>
+    <p class="tagline">각자 시간표만 넣으면, 팀 전원이 겹치는 공강을 찾아<br>회의 시간 Top 3를 추천해드려요.</p>
+    <form id="create-form" class="card">
+      <label for="title">팀 이름</label>
+      <input id="title" type="text" maxlength="50" placeholder="예: 마케팅원론 3조" required autocomplete="off">
+      <button type="submit">방 만들기 →</button>
+      <p id="error" class="error" hidden></p>
+    </form>
+    <ol class="how">
+      <li>방을 만들고 링크를 팀 단톡에 공유</li>
+      <li>각자 수업 시간을 드래그로 칠하고 저장</li>
+      <li>전원 공강 히트맵 + 추천 회의시간 확인</li>
+    </ol>
+  </main>
+  <script>
+    document.getElementById('create-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('error');
+      errEl.hidden = true;
+      const title = document.getElementById('title').value.trim();
+      if (!title) return;
+      try {
+        const res = await fetch('/api/rooms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title }),
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        location.href = '/r/' + encodeURIComponent(data.room_id);
+      } catch {
+        errEl.textContent = '방 생성에 실패했어요. 잠시 후 다시 시도해주세요.';
+        errEl.hidden = false;
+      }
+    });
+  </script>
+</body>
+</html>

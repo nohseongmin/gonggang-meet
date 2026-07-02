@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>공강밋 — 팀 공강 찾기</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main>
+    <div class="room-head">
+      <h1 id="room-title">불러오는 중…</h1>
+      <button id="copy-link" class="secondary" type="button">🔗 링크 복사</button>
+      <span id="copy-ok" class="copy-ok" hidden>복사됨!</span>
+    </div>
+    <div class="member-chips" id="member-chips"></div>
+
+    <h2>⏰ 추천 회의시간 Top 3 <small style="font-weight:400;color:var(--muted)">(전원 공강 · 60분 이상)</small></h2>
+    <ul class="reco-list" id="reco-list"></ul>
+    <p class="reco-empty" id="reco-empty" hidden></p>
+
+    <h2>🗓️ 팀 공강 히트맵</h2>
+    <p class="legend">
+      <span class="l-free">전원 공강</span>
+      <span class="l-busy">내가 칠한 수업 시간 (편집 모드)</span>
+    </p>
+    <div class="card">
+      <div class="toolbar">
+        <input id="name" type="text" maxlength="20" placeholder="닉네임 (예: 성민)" autocomplete="off">
+        <button id="save" type="button">내 시간표 저장</button>
+        <button id="clear" type="button" class="secondary">지우기</button>
+      </div>
+      <div class="grid-wrap"><table class="grid" id="grid"></table></div>
+      <p class="hint">수업(바쁜) 시간을 드래그로 칠한 뒤 저장하세요. 같은 닉네임으로 저장하면 시간표를 수정할 수 있어요.</p>
+      <p id="error" class="error" hidden></p>
+    </div>
+  </main>
+  <script src="/static/room.js"></script>
+</body>
+</html>
