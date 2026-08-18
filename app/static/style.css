@@ -73,10 +73,7 @@ table.grid th { background: #f1f3f9; font-size: 0.8rem; padding: 6px 4px; }
 table.grid td.time { font-size: 0.72rem; color: var(--muted); width: 52px; padding: 2px; }
 table.grid td.slot { height: 22px; cursor: pointer; background: #fff; }
 table.grid td.slot.busy { background: var(--busy); }
-table.grid td.slot.hfree-1 { background: #d1fae5; }
-table.grid td.slot.hfree-2 { background: #6ee7b7; }
 table.grid td.slot.hfree-3 { background: var(--free); }
-table.grid td.slot.hfree-4 { background: var(--free-strong); }
 .legend { display: flex; gap: 16px; font-size: 0.8rem; color: var(--muted); margin: 8px 0; flex-wrap: wrap; }
 .legend span::before {
   content: ""; display: inline-block; width: 12px; height: 12px;
