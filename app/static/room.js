@@ -47,7 +47,7 @@
       const s = Number(td.dataset.slot);
       td.className = 'slot';
       if (myBusy.has(s)) td.classList.add('busy');
-      else if (memberCount > 0 && freeSlots.has(s)) td.classList.add('hfree-3');
+      else if (memberCount > 0 && freeSlots.has(s)) td.classList.add('free');
     });
   }
 
