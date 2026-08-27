@@ -99,12 +99,6 @@ class TimetableSave(BaseModel):
         return sorted(set(v))
 
 
-def slot_label(slot: int) -> dict:
-    day, idx = divmod(slot, SLOTS_PER_DAY)
-    hh, mm = divmod(idx * 30, 60)
-    return {"day": day, "time": f"{9 + hh:02d}:{mm:02d}"}
-
-
 def compute_recommendations(member_slot_sets: list[set[int]]) -> dict:
     """Intersect free time across members and rank contiguous blocks."""
     busy_union = set().union(*member_slot_sets) if member_slot_sets else set()
