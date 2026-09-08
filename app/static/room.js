@@ -1,4 +1,4 @@
-/* Gonggang-Meet room page: timetable grid + heatmap + recommendations */
+/* Gonggang-Meet room page: timetable grid + free-time highlight + recommendations */
 (() => {
   const DAYS = ['월', '화', '수', '목', '금'];
   const SLOTS_PER_DAY = 24; // 09:00-21:00, 30-min
