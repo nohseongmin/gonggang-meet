@@ -54,6 +54,16 @@ python -m uvicorn app.main:app --port 8377
 
 별도 DB 설치 불필요 — 첫 실행 시 SQLite 파일(`gonggang.db`)이 자동 생성됩니다.
 
+### 🐳 Docker로 실행
+
+```bash
+docker compose up -d
+# 브라우저에서 http://127.0.0.1:8377 접속
+```
+
+DB는 도커 볼륨(`gonggang-data`)에 저장되어 컨테이너를 재빌드해도 데이터가 유지됩니다.
+DB 경로는 `GONGGANG_DB` 환경변수로 바꿀 수 있습니다.
+
 ## 📁 프로젝트 구조
 
 ```

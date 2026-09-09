@@ -1,0 +1,12 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+gonggang.db
+docs/
+BLUEPRINT.md
+LICENSE
+README.md
+Dockerfile
+docker-compose.yml
+.dockerignore

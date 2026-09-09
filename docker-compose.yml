@@ -1,0 +1,11 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8377:8377"
+    volumes:
+      - gonggang-data:/data
+    restart: unless-stopped
+
+volumes:
+  gonggang-data:

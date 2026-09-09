@@ -1,4 +1,5 @@
 """Gonggang-Meet: find shared free slots for university team meetings."""
+import os
 import re
 import secrets
 import sqlite3
@@ -11,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR.parent / "gonggang.db"
+DB_PATH = Path(os.environ.get("GONGGANG_DB", BASE_DIR.parent / "gonggang.db"))
 STATIC_DIR = BASE_DIR / "static"
 
 # Grid constants: Mon-Fri (5 days), 09:00-21:00 in 30-min slots (24 per day)
