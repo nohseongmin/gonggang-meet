@@ -6,9 +6,11 @@
 
   const grid = document.getElementById('grid');
   const errEl = document.getElementById('error');
+  const nameInput = document.getElementById('name');
   const myBusy = new Set();
   let freeSlots = new Set();
   let memberCount = 0;
+  let members = [];
   let dragging = false;
   let dragMode = 'add';
 
@@ -80,6 +82,15 @@
     errEl.hidden = false;
   }
 
+  // 같은 닉네임을 입력하면 기존에 저장된 시간표를 불러와 편집할 수 있게 한다.
+  function loadMyBusyFor(name) {
+    const found = members.find((m) => m.name === name);
+    myBusy.clear();
+    if (found) found.busy_slots.forEach((s) => myBusy.add(s));
+    paint();
+  }
+  nameInput.addEventListener('change', () => loadMyBusyFor(nameInput.value.trim()));
+
   async function load() {
     errEl.hidden = true;
     const res = await fetch('/api/rooms/' + encodeURIComponent(roomId));
@@ -90,6 +101,7 @@
     const data = await res.json();
     document.getElementById('room-title').textContent = data.title;
     memberCount = data.members.length;
+    members = data.members;
     freeSlots = new Set(data.free_slots);
 
     const chips = document.getElementById('member-chips');
