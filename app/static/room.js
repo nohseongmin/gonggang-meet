@@ -85,8 +85,9 @@
   // 같은 닉네임을 입력하면 기존에 저장된 시간표를 불러와 편집할 수 있게 한다.
   function loadMyBusyFor(name) {
     const found = members.find((m) => m.name === name);
+    if (!found) return; // 저장된 적 없는 닉네임이면 지금 칠하고 있는 내용을 건드리지 않는다.
     myBusy.clear();
-    if (found) found.busy_slots.forEach((s) => myBusy.add(s));
+    found.busy_slots.forEach((s) => myBusy.add(s));
     paint();
   }
   nameInput.addEventListener('change', () => loadMyBusyFor(nameInput.value.trim()));
