@@ -96,7 +96,11 @@
     errEl.hidden = true;
     const res = await fetch('/api/rooms/' + encodeURIComponent(roomId));
     if (!res.ok) {
-      document.getElementById('room-title').textContent = '방을 찾을 수 없어요';
+      if (res.status === 404) {
+        document.getElementById('room-title').textContent = '방을 찾을 수 없어요';
+      } else {
+        showError('방 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      }
       return;
     }
     const data = await res.json();
