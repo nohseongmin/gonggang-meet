@@ -1,4 +1,5 @@
 """Gonggang-Meet: find shared free slots for university team meetings."""
+import logging
 import os
 import re
 import secrets
@@ -21,6 +22,7 @@ SLOTS_PER_DAY = 24
 TOTAL_SLOTS = DAYS * SLOTS_PER_DAY
 MIN_MEETING_SLOTS = 2  # 60 minutes
 
+logger = logging.getLogger(__name__)
 app = FastAPI(title="Gonggang-Meet", docs_url=None, redoc_url=None)
 
 
@@ -62,6 +64,7 @@ init_db()
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request, exc):
     # Never leak internals (stack traces, paths) to the client.
+    logger.exception("Unhandled request error", exc_info=exc)
     return JSONResponse(status_code=500, content={"detail": "server error"})
 
 
