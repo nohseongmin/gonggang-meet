@@ -29,7 +29,7 @@ h1 { font-size: 2rem; margin: 0 0 4px; }
   margin: 16px 0;
 }
 label { display: block; font-weight: 600; margin-bottom: 6px; }
-input[type="text"] {
+input[type="text"], input[type="number"] {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -49,6 +49,7 @@ button {
 }
 button:hover { background: var(--accent-dark); }
 button.secondary { background: #eef0f6; color: var(--ink); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
 .error { color: #dc2626; margin: 8px 0 0; }
 .how { color: var(--muted); line-height: 1.9; }
 
@@ -93,6 +94,7 @@ table.grid td.slot.free { background: var(--free); }
   display: inline-block; background: var(--free-strong); color: #fff;
   border-radius: 6px; font-size: 0.75rem; padding: 2px 8px; margin-right: 8px;
 }
+.reco-list li button { margin: 8px 0 0 12px; font-size: 0.85rem; }
 .reco-empty { color: var(--muted); }
 .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
 .toolbar input { flex: 1; min-width: 160px; margin-bottom: 0; }
