@@ -13,6 +13,8 @@
     <form id="create-form" class="card">
       <label for="title">팀 이름</label>
       <input id="title" type="text" maxlength="50" placeholder="예: 마케팅원론 3조" required autocomplete="off">
+      <label for="expected-members">팀 인원 (나 포함)</label>
+      <input id="expected-members" type="number" min="1" max="100" step="1" placeholder="예: 4" required>
       <button type="submit">방 만들기 →</button>
       <p id="error" class="error" hidden></p>
     </form>
@@ -28,12 +30,13 @@
       const errEl = document.getElementById('error');
       errEl.hidden = true;
       const title = document.getElementById('title').value.trim();
+      const expectedMembers = Number(document.getElementById('expected-members').value);
       if (!title) return;
       try {
         const res = await fetch('/api/rooms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title }),
+          body: JSON.stringify({ title, expected_members: expectedMembers }),
         });
         if (!res.ok) throw new Error();
         const data = await res.json();

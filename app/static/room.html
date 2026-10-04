@@ -11,17 +11,20 @@
     <div class="room-head">
       <h1 id="room-title">불러오는 중…</h1>
       <button id="copy-link" class="secondary" type="button">🔗 링크 복사</button>
+      <button id="refresh" class="secondary" type="button">응답 새로고침</button>
       <span id="copy-ok" class="copy-ok" hidden>복사됨!</span>
     </div>
     <div class="member-chips" id="member-chips"></div>
+    <p id="response-count" role="status"></p>
+    <p id="confirmed-meeting" role="status"></p>
 
-    <h2>⏰ 추천 회의시간 Top 3 <small style="font-weight:400;color:var(--muted)">(전원 공강 · 60분 이상)</small></h2>
+    <h2>⏰ 추천 회의시간 Top 3 <small style="font-weight:400;color:var(--muted)">(응답한 팀원 공강 · 60분 이상)</small></h2>
     <ul class="reco-list" id="reco-list"></ul>
     <p class="reco-empty" id="reco-empty" hidden></p>
 
     <h2>🗓️ 팀 공강 히트맵</h2>
     <p class="legend">
-      <span class="l-free">전원 공강</span>
+      <span class="l-free">응답한 팀원 공강</span>
       <span class="l-busy">내가 칠한 수업 시간 (편집 모드)</span>
     </p>
     <div class="card">
@@ -31,7 +34,7 @@
         <button id="clear" type="button" class="secondary">지우기</button>
       </div>
       <div class="grid-wrap"><table class="grid" id="grid"></table></div>
-      <p class="hint">수업(바쁜) 시간을 드래그로 칠한 뒤 저장하세요. 같은 닉네임으로 저장하면 시간표를 수정할 수 있어요.</p>
+      <p class="hint">수업(바쁜) 시간을 드래그로 칠한 뒤 저장하세요. 내 시간표는 처음 저장한 브라우저에서 수정할 수 있어요. 브라우저 데이터를 지우면 편집 권한을 잃어요. 다른 팀원의 닉네임은 사용할 수 없어요.</p>
       <p id="error" class="error" hidden></p>
     </div>
   </main>

@@ -1,4 +1,5 @@
 """Gonggang-Meet: find shared free slots for university team meetings."""
+import hashlib
 import logging
 import os
 import re
@@ -7,7 +8,7 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
@@ -21,6 +22,11 @@ DAYS = 5
 SLOTS_PER_DAY = 24
 TOTAL_SLOTS = DAYS * SLOTS_PER_DAY
 MIN_MEETING_SLOTS = 2  # 60 minutes
+SLOT_MINUTES = 30
+MAX_EXPECTED_MEMBERS = 100
+IDENTITY_COOKIE = "gonggang_identity"
+IDENTITY_BYTES = 32
+IDENTITY_COOKIE_MAX_AGE = 365 * 24 * 60 * 60
 
 logger = logging.getLogger(__name__)
 app = FastAPI(title="Gonggang-Meet", docs_url=None, redoc_url=None)
@@ -56,6 +62,18 @@ def init_db():
             );
             """
         )
+        columns = {
+            "rooms": {row["name"] for row in db.execute("PRAGMA table_info(rooms)")},
+            "members": {row["name"] for row in db.execute("PRAGMA table_info(members)")},
+        }
+        for table, column, statement in (
+            ("rooms", "owner_hash", "ALTER TABLE rooms ADD COLUMN owner_hash TEXT"),
+            ("rooms", "expected_members", "ALTER TABLE rooms ADD COLUMN expected_members INTEGER"),
+            ("rooms", "confirmed_start_slot", "ALTER TABLE rooms ADD COLUMN confirmed_start_slot INTEGER"),
+            ("members", "owner_hash", "ALTER TABLE members ADD COLUMN owner_hash TEXT"),
+        ):
+            if column not in columns[table]:
+                db.execute(statement)
 
 
 init_db()
@@ -70,6 +88,7 @@ async def unhandled_exception_handler(request, exc):
 
 class RoomCreate(BaseModel):
     title: str = Field(min_length=1, max_length=50)
+    expected_members: int | None = Field(default=None, ge=1, le=MAX_EXPECTED_MEMBERS, strict=True)
 
     @field_validator("title")
     @classmethod
@@ -101,6 +120,45 @@ class TimetableSave(BaseModel):
             if not (0 <= s < TOTAL_SLOTS):
                 raise ValueError("slot index out of range")
         return sorted(set(v))
+
+
+class MeetingConfirm(BaseModel):
+    start_slot: int = Field(ge=0, lt=TOTAL_SLOTS, strict=True)
+
+    @field_validator("start_slot")
+    @classmethod
+    def validate_start_slot(cls, value: int) -> int:
+        if value % SLOTS_PER_DAY > SLOTS_PER_DAY - MIN_MEETING_SLOTS:
+            raise ValueError("meeting must fit within one weekday")
+        return value
+
+
+def get_browser_hash(request: Request) -> str | None:
+    token = request.cookies.get(IDENTITY_COOKIE, "")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{43}", token):
+        return None
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def ensure_browser_identity(request: Request, response: Response) -> str:
+    response.headers["Cache-Control"] = "no-store"
+    token_hash = get_browser_hash(request)
+    if token_hash:
+        return token_hash
+    token = secrets.token_urlsafe(IDENTITY_BYTES)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    response.set_cookie(
+        IDENTITY_COOKIE, token, max_age=IDENTITY_COOKIE_MAX_AGE,
+        httponly=True, samesite="strict", secure=request.url.scheme == "https",
+    )
+    return token_hash
+
+
+def meeting_is_available(room: sqlite3.Row, slot_sets: list[set[int]], start_slot: int) -> bool:
+    if not slot_sets or len(slot_sets) < (room["expected_members"] or 1):
+        return False
+    meeting_slots = set(range(start_slot, start_slot + MIN_MEETING_SLOTS))
+    return all(not meeting_slots.intersection(busy) for busy in slot_sets)
 
 
 def compute_recommendations(member_slot_sets: list[set[int]]) -> dict:
@@ -140,25 +198,31 @@ def compute_recommendations(member_slot_sets: list[set[int]]) -> dict:
 
 
 @app.post("/api/rooms")
-def create_room(body: RoomCreate):
+def create_room(body: RoomCreate, request: Request, response: Response):
     room_id = secrets.token_urlsafe(8)  # unguessable room token
     with get_db() as db:
+        owner_hash = ensure_browser_identity(request, response)
         db.execute(
-            "INSERT INTO rooms (id, title) VALUES (?, ?)", (room_id, body.title)
+            "INSERT INTO rooms (id, title, owner_hash, expected_members) VALUES (?, ?, ?, ?)",
+            (room_id, body.title, owner_hash, body.expected_members),
         )
     return {"room_id": room_id}
 
 
 @app.get("/api/rooms/{room_id}")
-def get_room(room_id: str):
+def get_room(room_id: str, request: Request, response: Response):
     with get_db() as db:
+        # Keep room metadata and member schedules in the same snapshot.
+        db.execute("BEGIN")
         room = db.execute(
-            "SELECT id, title FROM rooms WHERE id = ?", (room_id,)
+            "SELECT id, title, owner_hash, expected_members, confirmed_start_slot FROM rooms WHERE id = ?",
+            (room_id,),
         ).fetchone()
         if room is None:
             raise HTTPException(status_code=404, detail="room not found")
+        browser_hash = ensure_browser_identity(request, response)
         rows = db.execute(
-            "SELECT name, busy_slots FROM members WHERE room_id = ? ORDER BY updated_at",
+            "SELECT name, busy_slots, owner_hash FROM members WHERE room_id = ? ORDER BY updated_at",
             (room_id,),
         ).fetchall()
 
@@ -166,39 +230,85 @@ def get_room(room_id: str):
     slot_sets = []
     for r in rows:
         slots = [int(x) for x in r["busy_slots"].split(",") if x]
-        members.append({"name": r["name"], "busy_slots": slots})
+        members.append({
+            "name": r["name"], "busy_slots": slots,
+            "editable": r["owner_hash"] == browser_hash,
+        })
         slot_sets.append(set(slots))
 
     result = compute_recommendations(slot_sets) if slot_sets else {
         "free_slots": [],
         "recommendations": [],
     }
+    confirmed_meeting = None
+    if room["confirmed_start_slot"] is not None:
+        confirmed_meeting = {
+            "start_slot": room["confirmed_start_slot"],
+            "minutes": MIN_MEETING_SLOTS * SLOT_MINUTES,
+            "is_valid": meeting_is_available(room, slot_sets, room["confirmed_start_slot"]),
+        }
     return {
         "room_id": room["id"],
         "title": room["title"],
         "members": members,
+        "expected_members": room["expected_members"],
+        "is_owner": room["owner_hash"] == browser_hash,
+        "confirmed_meeting": confirmed_meeting,
         **result,
     }
 
 
 @app.put("/api/rooms/{room_id}/timetable")
-def save_timetable(room_id: str, body: TimetableSave):
+def save_timetable(room_id: str, body: TimetableSave, request: Request):
     with get_db() as db:
+        db.execute("BEGIN IMMEDIATE")
         room = db.execute(
             "SELECT id FROM rooms WHERE id = ?", (room_id,)
         ).fetchone()
         if room is None:
             raise HTTPException(status_code=404, detail="room not found")
-        db.execute(
+        browser_hash = get_browser_hash(request)
+        if browser_hash is None:
+            raise HTTPException(status_code=403, detail="편집 권한을 확인할 수 없어요. 방 페이지를 다시 열어주세요.")
+        cursor = db.execute(
             """
-            INSERT INTO members (room_id, name, busy_slots, updated_at)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO members (room_id, name, busy_slots, owner_hash, updated_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(room_id, name)
             DO UPDATE SET busy_slots = excluded.busy_slots,
                           updated_at = CURRENT_TIMESTAMP
+            WHERE members.owner_hash = excluded.owner_hash
             """,
-            (room_id, body.name, ",".join(map(str, body.busy_slots))),
+            (room_id, body.name, ",".join(map(str, body.busy_slots)), browser_hash),
         )
+        if cursor.rowcount == 0:
+            raise HTTPException(
+                status_code=403,
+                detail="이 닉네임은 처음 저장한 브라우저에서만 수정할 수 있어요. 기존 시간표에 권한이 없다면 다른 닉네임을 사용해주세요.",
+            )
+    return {"ok": True}
+
+
+@app.put("/api/rooms/{room_id}/meeting")
+def confirm_meeting(room_id: str, body: MeetingConfirm, request: Request):
+    with get_db() as db:
+        # Serialize validation and confirmation with timetable writes.
+        db.execute("BEGIN IMMEDIATE")
+        room = db.execute(
+            "SELECT owner_hash, expected_members FROM rooms WHERE id = ?", (room_id,)
+        ).fetchone()
+        if room is None:
+            raise HTTPException(status_code=404, detail="room not found")
+        browser_hash = get_browser_hash(request)
+        if browser_hash is None or room["owner_hash"] != browser_hash:
+            raise HTTPException(status_code=403, detail="회의는 방을 만든 브라우저에서만 확정할 수 있어요.")
+        rows = db.execute("SELECT busy_slots FROM members WHERE room_id = ?", (room_id,)).fetchall()
+        slot_sets = [{int(value) for value in row["busy_slots"].split(",") if value} for row in rows]
+        if len(slot_sets) < (room["expected_members"] or 1):
+            raise HTTPException(status_code=409, detail="아직 필요한 인원의 시간표가 모두 저장되지 않았어요.")
+        if not meeting_is_available(room, slot_sets, body.start_slot):
+            raise HTTPException(status_code=409, detail="이 시간에는 참석할 수 없는 팀원이 있어요. 다른 공강을 선택해주세요.")
+        db.execute("UPDATE rooms SET confirmed_start_slot = ? WHERE id = ?", (body.start_slot, room_id))
     return {"ok": True}
 
 
