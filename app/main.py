@@ -11,7 +11,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, StrictInt, field_validator
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("GONGGANG_DB", BASE_DIR.parent / "gonggang.db"))
@@ -101,7 +101,7 @@ class RoomCreate(BaseModel):
 
 class TimetableSave(BaseModel):
     name: str = Field(min_length=1, max_length=20)
-    busy_slots: list[int] = Field(max_length=TOTAL_SLOTS)
+    busy_slots: list[StrictInt] = Field(max_length=TOTAL_SLOTS)
 
     @field_validator("name")
     @classmethod

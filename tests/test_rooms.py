@@ -159,6 +159,19 @@ def test_room_without_expected_count_can_confirm_after_first_response(clients):
     assert owner.get(room_url).json()["confirmed_meeting"] == {"start_slot": 118, "minutes": 60, "is_valid": True}
 
 
+@pytest.mark.parametrize("slot", [True, False, "1", 1.0, 1.5, None, -1, 120])
+def test_invalid_timetable_slots_do_not_overwrite_saved_schedule(api, clients, slot):
+    owner, _ = clients
+    room_url = create_room(owner)
+    busy_slots = [0, api.TOTAL_SLOTS - 1]
+    assert owner.put(room_url + "/timetable", json={"name": "가람", "busy_slots": busy_slots}).status_code == 200
+
+    response = owner.put(room_url + "/timetable", json={"name": "가람", "busy_slots": [0, slot]})
+
+    assert response.status_code == 422
+    assert owner.get(room_url).json()["members"][0]["busy_slots"] == busy_slots
+
+
 @pytest.mark.parametrize("start_slot", [-1, 23, 47, 71, 95, 119, 120, 1.5, True, "2"])
 def test_invalid_meeting_slots_are_rejected(clients, start_slot):
     owner, _ = clients
