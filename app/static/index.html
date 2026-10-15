@@ -27,11 +27,14 @@
   <script>
     document.getElementById('create-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const createButton = e.currentTarget.querySelector('button[type="submit"]');
+      if (createButton.disabled) return;
       const errEl = document.getElementById('error');
       errEl.hidden = true;
       const title = document.getElementById('title').value.trim();
       const expectedMembers = Number(document.getElementById('expected-members').value);
       if (!title) return;
+      createButton.disabled = true;
       try {
         const res = await fetch('/api/rooms', {
           method: 'POST',
@@ -42,6 +45,7 @@
         const data = await res.json();
         location.href = '/r/' + encodeURIComponent(data.room_id);
       } catch {
+        createButton.disabled = false;
         errEl.textContent = '방 생성에 실패했어요. 잠시 후 다시 시도해주세요.';
         errEl.hidden = false;
       }
