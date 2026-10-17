@@ -12,6 +12,7 @@
   let memberCount = 0;
   let members = [];
   let canConfirm = false;
+  let loadRequestId = 0;
   let dragging = false;
   let dragMode = 'add';
 
@@ -97,8 +98,18 @@
   nameInput.addEventListener('change', () => loadMyBusyFor(nameInput.value.trim()));
 
   async function load() {
+    const requestId = ++loadRequestId;
     errEl.hidden = true;
-    const res = await fetch('/api/rooms/' + encodeURIComponent(roomId));
+    let res;
+    let data;
+    try {
+      res = await fetch('/api/rooms/' + encodeURIComponent(roomId));
+      if (res.ok) data = await res.json();
+    } catch (error) {
+      if (requestId !== loadRequestId) return;
+      throw error;
+    }
+    if (requestId !== loadRequestId) return;
     if (!res.ok) {
       if (res.status === 404) {
         document.getElementById('room-title').textContent = '방을 찾을 수 없어요';
@@ -107,7 +118,6 @@
       }
       return;
     }
-    const data = await res.json();
     document.getElementById('room-title').textContent = data.title;
     memberCount = data.members.length;
     members = data.members;
