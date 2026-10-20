@@ -73,6 +73,7 @@
     if (td) toggle(Number(td.dataset.slot));
   });
   window.addEventListener('pointerup', () => (dragging = false));
+  window.addEventListener('pointercancel', () => (dragging = false));
 
   function toggle(s) {
     if (dragMode === 'add') myBusy.add(s);
