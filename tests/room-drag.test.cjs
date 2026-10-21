@@ -8,7 +8,7 @@ const { test } = require('node:test');
 const source = fs.readFileSync(path.join(__dirname, '../app/static/room.js'), 'utf8');
 
 for (const eventType of ['pointerup', 'pointercancel']) {
-  test('timetable drag stops after ' + eventType + ' and can restart', async () => {
+  test('timetable drag ignores non-primary buttons, stops after ' + eventType + ' and can restart', async () => {
     const elements = new Map();
     const element = () => ({
       textContent: '',
@@ -46,9 +46,16 @@ for (const eventType of ['pointerup', 'pointercancel']) {
     elements.get('name').value = '가람';
     const grid = elements.get('grid');
     const pointer = (slot) => ({
+      button: 0,
       target: { closest: () => ({ dataset: { slot: String(slot) } }) },
       preventDefault() {},
     });
+
+    for (const [button, slot] of [[1, 5], [2, 7]]) {
+      grid.handlers.pointerdown({ ...pointer(slot), button });
+      grid.handlers.pointerover(pointer(slot + 1));
+      windowHandlers.pointerup();
+    }
 
     grid.handlers.pointerdown(pointer(0));
     grid.handlers.pointerover(pointer(1));
