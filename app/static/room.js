@@ -57,6 +57,7 @@
 
   // ---- drag painting ----
   grid.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
     const td = e.target.closest('td.slot');
     if (!td) return;
     const member = members.find((m) => m.name === nameInput.value.trim());
