@@ -7,7 +7,7 @@ const { test } = require('node:test');
 
 const source = fs.readFileSync(path.join(__dirname, '../app/static/room.js'), 'utf8');
 
-for (const eventType of ['pointerup', 'pointercancel']) {
+for (const eventType of ['pointerup', 'pointercancel', 'blur']) {
   test('timetable drag ignores non-primary buttons, stops after ' + eventType + ' and can restart', async () => {
     const elements = new Map();
     const element = () => ({

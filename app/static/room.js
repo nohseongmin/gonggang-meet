@@ -75,6 +75,7 @@
   });
   window.addEventListener('pointerup', () => (dragging = false));
   window.addEventListener('pointercancel', () => (dragging = false));
+  window.addEventListener('blur', () => (dragging = false));
 
   function toggle(s) {
     if (dragMode === 'add') myBusy.add(s);
