@@ -202,7 +202,7 @@
                 showError(typeof problem.detail === 'string' ? problem.detail : '회의를 확정하지 못했어요. 응답을 새로고침해주세요.');
                 return;
               }
-              await load();
+              await load().catch(() => showError('회의는 확정했지만 응답을 불러오지 못했어요. 응답을 새로고침해주세요.'));
             } catch {
               showError('회의 확정에 실패했어요. 네트워크를 확인해주세요.');
             } finally {
@@ -242,7 +242,7 @@
         showError(typeof problem.detail === 'string' ? problem.detail : '닉네임은 20자 이내의 문자, 숫자, 공백, ., -, _만 사용할 수 있어요.');
         return;
       }
-      await load();
+      await load().catch(() => showError('시간표는 저장했지만 응답을 불러오지 못했어요. 응답을 새로고침해주세요.'));
     } catch {
       showError('저장에 실패했어요. 닉네임은 20자 이내의 문자, 숫자, 공백, ., -, _만 사용할 수 있어요. 네트워크도 확인해주세요.');
     } finally {
