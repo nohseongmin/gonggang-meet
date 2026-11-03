@@ -7,6 +7,72 @@ const { test } = require('node:test');
 
 const source = fs.readFileSync(path.join(__dirname, '../app/static/room.js'), 'utf8');
 
+for (const edit of ['none', 'paint', 'clear']) {
+  test('delayed room load preserves timetable input after ' + edit, async () => {
+    const elements = new Map();
+    const element = () => ({
+      textContent: '',
+      hidden: true,
+      value: '',
+      dataset: {},
+      handlers: {},
+      appendChild() {},
+      querySelectorAll() { return []; },
+      addEventListener(type, handler) { this.handlers[type] = handler; },
+    });
+    const document = {
+      getElementById(id) {
+        if (!elements.has(id)) elements.set(id, element());
+        return elements.get(id);
+      },
+      createElement: element,
+    };
+    const room = {
+      title: '팀플',
+      members: [{ name: '가람', busy_slots: [8], editable: true }],
+      free_slots: [], recommendations: [], expected_members: 1,
+      is_owner: false, confirmed_meeting: null,
+    };
+    let resolveLoad;
+    const pending = new Promise((resolve) => { resolveLoad = resolve; });
+    const requests = [];
+    vm.runInNewContext(source, {
+      document,
+      location: { pathname: '/r/test-room' },
+      window: { addEventListener() {} },
+      fetch: (url, options) => {
+        if (options) {
+          requests.push({ url, options });
+          return Promise.resolve({ ok: true });
+        }
+        return pending;
+      },
+    });
+
+    if (edit === 'paint') {
+      elements.get('grid').handlers.pointerdown({
+        button: 0,
+        target: { closest: () => ({ dataset: { slot: '2' } }) },
+        preventDefault() {},
+      });
+    }
+    if (edit === 'clear') elements.get('clear').handlers.click();
+    resolveLoad({ ok: true, json: async () => room });
+    await new Promise(setImmediate);
+
+    assert.equal(elements.get('name').value, edit === 'none' ? '가람' : '');
+    if (edit !== 'none') elements.get('name').value = '나래';
+    await elements.get('save').handlers.click();
+
+    assert.equal(requests.length, 1);
+    assert.deepEqual(JSON.parse(requests[0].options.body), {
+      name: edit === 'none' ? '가람' : '나래',
+      busy_slots: edit === 'none' ? [8] : edit === 'paint' ? [2] : [],
+    });
+    assert.equal(elements.get('error').hidden, true);
+  });
+}
+
 for (const status of [404, 500, 503]) {
   test('room load handles HTTP ' + status, async () => {
     const elements = new Map();

@@ -8,6 +8,7 @@
   const errEl = document.getElementById('error');
   const nameInput = document.getElementById('name');
   const myBusy = new Set();
+  let hasEditedTimetable = false;
   let freeSlots = new Set();
   let memberCount = 0;
   let members = [];
@@ -78,6 +79,7 @@
   window.addEventListener('blur', () => (dragging = false));
 
   function toggle(s) {
+    hasEditedTimetable = true;
     if (dragMode === 'add') myBusy.add(s);
     else myBusy.delete(s);
     paint();
@@ -137,7 +139,7 @@
     confirmed.textContent = meeting
       ? (meeting.is_valid ? '확정된 회의: ' : '시간표가 바뀌어 다시 확인해야 해요: ') + slotLabel(meeting.start_slot) + '부터 ' + meeting.minutes + '분'
       : (data.is_owner ? '팀원 응답이 모이면 추천 시간의 처음 60분을 확정할 수 있어요.' : '방을 만든 사람이 회의 시간을 확정할 수 있어요.');
-    if (!nameInput.value.trim()) {
+    if (!nameInput.value.trim() && !hasEditedTimetable) {
       const mine = members.find((m) => m.editable);
       if (mine) {
         nameInput.value = mine.name;
@@ -251,6 +253,7 @@
   });
 
   document.getElementById('clear').addEventListener('click', () => {
+    hasEditedTimetable = true;
     myBusy.clear();
     paint();
   });
