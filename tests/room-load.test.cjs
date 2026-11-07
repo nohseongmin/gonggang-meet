@@ -7,8 +7,12 @@ const { test } = require('node:test');
 
 const source = fs.readFileSync(path.join(__dirname, '../app/static/room.js'), 'utf8');
 
-for (const edit of ['none', 'paint', 'clear']) {
-  test('delayed room load preserves timetable input after ' + edit, async () => {
+for (const [edit, name] of [
+  ['none', ''], ['paint', ''], ['clear', ''],
+  ['none', '가람'], ['paint', '가람'], ['clear', '가람'],
+  ['none', '나래'],
+]) {
+  test('delayed room load preserves timetable input after ' + edit + ' with nickname ' + JSON.stringify(name), async () => {
     const elements = new Map();
     const element = () => ({
       textContent: '',
@@ -49,6 +53,7 @@ for (const edit of ['none', 'paint', 'clear']) {
       },
     });
 
+    elements.get('name').value = name;
     if (edit === 'paint') {
       elements.get('grid').handlers.pointerdown({
         button: 0,
@@ -60,14 +65,15 @@ for (const edit of ['none', 'paint', 'clear']) {
     resolveLoad({ ok: true, json: async () => room });
     await new Promise(setImmediate);
 
-    assert.equal(elements.get('name').value, edit === 'none' ? '가람' : '');
-    if (edit !== 'none') elements.get('name').value = '나래';
+    const shouldLoadMine = edit === 'none' && name !== '나래';
+    assert.equal(elements.get('name').value, shouldLoadMine ? '가람' : name);
+    if (!elements.get('name').value) elements.get('name').value = '나래';
     await elements.get('save').handlers.click();
 
     assert.equal(requests.length, 1);
     assert.deepEqual(JSON.parse(requests[0].options.body), {
-      name: edit === 'none' ? '가람' : '나래',
-      busy_slots: edit === 'none' ? [8] : edit === 'paint' ? [2] : [],
+      name: shouldLoadMine ? '가람' : name || '나래',
+      busy_slots: shouldLoadMine ? [8] : edit === 'paint' ? [2] : [],
     });
     assert.equal(elements.get('error').hidden, true);
   });
