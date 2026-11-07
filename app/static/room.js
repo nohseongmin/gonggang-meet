@@ -139,8 +139,9 @@
     confirmed.textContent = meeting
       ? (meeting.is_valid ? '확정된 회의: ' : '시간표가 바뀌어 다시 확인해야 해요: ') + slotLabel(meeting.start_slot) + '부터 ' + meeting.minutes + '분'
       : (data.is_owner ? '팀원 응답이 모이면 추천 시간의 처음 60분을 확정할 수 있어요.' : '방을 만든 사람이 회의 시간을 확정할 수 있어요.');
-    if (!nameInput.value.trim() && !hasEditedTimetable) {
-      const mine = members.find((m) => m.editable);
+    if (!hasEditedTimetable) {
+      const name = nameInput.value.trim();
+      const mine = members.find((m) => m.editable && (!name || m.name === name));
       if (mine) {
         nameInput.value = mine.name;
         loadMyBusyFor(mine.name);
