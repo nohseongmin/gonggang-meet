@@ -7,6 +7,75 @@ const { test } = require('node:test');
 
 const source = fs.readFileSync(path.join(__dirname, '../app/static/room.js'), 'utf8');
 
+for (const outcome of ['pending', 'http-error', 'network-error']) {
+  test('saving waits for the first successful room load after ' + outcome, async () => {
+    const elements = new Map();
+    const element = () => ({
+      textContent: '',
+      hidden: true,
+      value: '',
+      dataset: {},
+      handlers: {},
+      appendChild() {},
+      querySelectorAll() { return []; },
+      addEventListener(type, handler) { this.handlers[type] = handler; },
+    });
+    const document = {
+      getElementById(id) {
+        if (!elements.has(id)) elements.set(id, element());
+        return elements.get(id);
+      },
+      createElement: element,
+    };
+    const room = {
+      title: '팀플',
+      members: [{ name: '가람', busy_slots: [8], editable: true }],
+      free_slots: [], recommendations: [], expected_members: 1,
+      is_owner: false, confirmed_meeting: null,
+    };
+    let resolveLoad;
+    const pending = new Promise((resolve) => { resolveLoad = resolve; });
+    const writes = [];
+    let reads = 0;
+    vm.runInNewContext(source, {
+      document,
+      location: { pathname: '/r/test-room' },
+      window: { addEventListener() {} },
+      fetch: async (url, options) => {
+        if (options) {
+          writes.push({ url, options });
+          return { ok: true };
+        }
+        if (++reads === 1) {
+          if (outcome === 'pending') return pending;
+          if (outcome === 'network-error') throw new Error('offline');
+          return { ok: false, status: 503 };
+        }
+        return { ok: true, json: async () => room };
+      },
+    });
+    await new Promise(setImmediate);
+    elements.get('name').value = '가람';
+
+    await elements.get('save').handlers.click();
+
+    assert.equal(writes.length, 0);
+    assert.equal(elements.get('error').hidden, false);
+    assert.equal(elements.get('error').textContent,
+      '방 정보를 먼저 불러와주세요. 응답을 새로고침한 뒤 저장해주세요.');
+
+    if (outcome === 'pending') resolveLoad({ ok: true, json: async () => room });
+    else elements.get('refresh').handlers.click();
+    await new Promise(setImmediate);
+    await elements.get('save').handlers.click();
+
+    assert.equal(writes.length, 1);
+    assert.equal(writes[0].url, '/api/rooms/test-room/timetable');
+    assert.deepEqual(JSON.parse(writes[0].options.body), { name: '가람', busy_slots: [8] });
+    assert.equal(elements.get('error').hidden, true);
+  });
+}
+
 for (const [edit, name] of [
   ['none', ''], ['paint', ''], ['clear', ''],
   ['none', '가람'], ['paint', '가람'], ['clear', '가람'],

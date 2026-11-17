@@ -12,6 +12,7 @@
   let freeSlots = new Set();
   let memberCount = 0;
   let members = [];
+  let hasLoadedRoom = false;
   let canConfirm = false;
   let loadRequestId = 0;
   let dragging = false;
@@ -147,6 +148,7 @@
         loadMyBusyFor(mine.name);
       }
     }
+    hasLoadedRoom = true;
 
     const chips = document.getElementById('member-chips');
     chips.textContent = '';
@@ -227,6 +229,7 @@
 
   document.getElementById('save').addEventListener('click', async () => {
     errEl.hidden = true;
+    if (!hasLoadedRoom) return showError('방 정보를 먼저 불러와주세요. 응답을 새로고침한 뒤 저장해주세요.');
     const name = document.getElementById('name').value.trim();
     if (!name) return showError('닉네임을 입력해주세요.');
     const saveButton = document.getElementById('save');
